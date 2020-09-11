@@ -9,11 +9,15 @@ const { api } = require('./shared.js');
 var io = require('socket.io')(http, { path: '/updates', serveClient: false });
 var mongoose = require('mongoose');
 var { Message } = require('./models');
-//var cors = require('cors');
+var cors = require('cors');
 
 mongoose.connect(process.env.MONGO_URL || 'mongodb://localhost:27017/mr', { useNewUrlParser: true });
 
-//app.use(cors())
+app.use(cors({
+    origin: process.env.MAIN_SERVER_PUBLIC_URL || "http://localhost:8080",
+    credentials: true,
+}))
+
 app.use(cookieParser())
 
 const PORT = process.env.PORT || 3000;
@@ -66,7 +70,7 @@ app.get('/chats', (req, res) => {
         api.post("auth", { mrsid: req.cookies.mrsid }, (status, data) => {
             console.log(status, data)
             if (status == 200 && data != null && data.user_id != null && data.room_id) {
-                var start = new Date(req.query.startTime||0);
+                var start = new Date(req.query.startTime || 0);
                 Message.find({ room_id: data.room_id, type: 'chat.text', date: { $gt: start } })
                     .sort({ 'date': -1 }).limit(50).exec((err, docs) => {
                         if (!err) {
@@ -113,7 +117,7 @@ class Peer {
                     data: { text: data.text, user_id: this.user_id },
                     room_id: this.room_id
                 })
-                console.log(data,msg)
+                console.log(data, msg)
                 msg.save();
             }
         })
