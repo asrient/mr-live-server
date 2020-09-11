@@ -1,11 +1,20 @@
 require('dotenv').config()
 const EventEmitter = require('events');
+var cookieParser = require('cookie-parser')
 var app = require('express')();
 var redis = require('redis');
 var http = require('http').createServer(app);
 var cookie = require("cookie");
 const { api } = require('./shared.js');
 var io = require('socket.io')(http, { path: '/updates', serveClient: false });
+var mongoose = require('mongoose');
+var { Message } = require('./models');
+var cors = require('cors');
+
+mongoose.connect(process.env.MONGO_URL || 'mongodb://localhost:27017/mr', { useNewUrlParser: true });
+
+app.use(cors())
+app.use(cookieParser())
 
 const PORT = process.env.PORT || 3000;
 
@@ -52,6 +61,37 @@ app.get('/cookie', (req, res) => {
     }
 });
 
+app.get('/chats', (req, res) => {
+    if (req.cookies.mrsid) {
+        api.post("auth", { mrsid: req.cookies.mrsid }, (status, data) => {
+            console.log(status, data)
+            if (status == 200 && data != null && data.user_id != null && data.room_id) {
+                var start = new Date(req.query.startTime||0);
+                Message.find({ room_id: data.room_id, type: 'chat.text', date: { $gt: start } })
+                    .sort({ 'date': -1 }).limit(50).exec((err, docs) => {
+                        if (!err) {
+                            var list = [];
+                            docs.forEach((doc) => {
+                                var chat = { ...doc.data, date: doc.date.getTime() }
+                                list.splice(0, 0, chat)
+                            })
+                            res.status(200).json({ chats: list });
+                        }
+                        else {
+                            res.status(400).json({ msg: 'query failed' });
+                        }
+                    })
+            }
+            else {
+                res.status(400).json({ msg: 'could not auth' });
+            }
+        })
+    }
+    else {
+        res.status(400).json({ msg: 'cookie missing' });
+    }
+});
+
 class Peer {
     constructor(socket, user_id, room_id = null) {
         this.socket = socket;
@@ -64,13 +104,21 @@ class Peer {
         //console.log(this.socket.id, ' | ', 'listening to usertasks', 'u-' + this.user_id)
         userTasks.on('u-' + this.user_id, this.task)
         this.socket.on('chat.text', (data) => {
-            data=JSON.parse(data)
+            data = JSON.parse(data)
             if (data.date && data.text) {
                 this.roomSend('chat.text', { date: data['date'], text: data['text'], user_id: this.user_id })
+                var msg = new Message({
+                    date: new Date(data.date),
+                    type: 'chat.text',
+                    data: { text: data.text, user_id: this.user_id },
+                    room_id: this.room_id
+                })
+                console.log(data,msg)
+                msg.save();
             }
         })
         this.socket.on('chat.typing', (data) => {
-            data=JSON.parse(data)
+            data = JSON.parse(data)
             if (data.date && 'isTyping' in data) {
                 this.roomSend('chat.typing', { date: data['date'], isTyping: data['isTyping'], user_id: this.user_id })
             }
