@@ -9,11 +9,11 @@ const { api } = require('./shared.js');
 var io = require('socket.io')(http, { path: '/updates', serveClient: false });
 var mongoose = require('mongoose');
 var { Message } = require('./models');
-var cors = require('cors');
+//var cors = require('cors');
 
 mongoose.connect(process.env.MONGO_URL || 'mongodb://localhost:27017/mr', { useNewUrlParser: true });
 
-app.use(cors())
+//app.use(cors())
 app.use(cookieParser())
 
 const PORT = process.env.PORT || 3000;
