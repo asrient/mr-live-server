@@ -20,13 +20,13 @@ tunnel.on("connect", function () {
 tunnel.on("pmessage", function (pattern, channel, message) {
     var { timeout, data } = JSON.parse(message)
     if (channel == 'schedule:skipto') {
-        var room_id= data.room_id;
-        console.log('scheduling skipto',room_id,timeout)
-        setTimeout(()=>{
-            api.post('skipto',{room_id},(status,data)=>{
-                console.log('result of scheduled skipto',status,data)
+        var room_id = data.room_id;
+        console.log('scheduling skipto', room_id, timeout)
+        setTimeout(() => {
+            api.post('skipto', { room_id }, (status, data) => {
+                console.log('result of scheduled skipto', status, data)
             })
-        },timeout)
+        }, timeout)
     }
     else if (channel == 'schedule:room.dissolve') {
         Message.deleteMany({ room_id: data.room_id }, (err) => {
@@ -34,5 +34,11 @@ tunnel.on("pmessage", function (pattern, channel, message) {
         });
     }
 });
+
+setInterval(() => {
+    api.post('roomCheck', {}, (status, data) => {
+        console.log('room check done', status, data)
+    })
+}, 5*60*1000);
 
 tunnel.psubscribe("schedule:*");
