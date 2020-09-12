@@ -70,7 +70,9 @@ app.get('/chats', (req, res) => {
         api.post("auth", { mrsid: req.cookies.mrsid }, (status, data) => {
             console.log(status, data)
             if (status == 200 && data != null && data.user_id != null && data.room_id) {
-                var start = new Date(req.query.startTime || 0);
+                var start = new Date(0);
+                if (req.query.startTime)
+                    start = new Date(parseInt(req.query.startTime));
                 Message.find({ room_id: data.room_id, type: 'chat.text', date: { $gt: start } })
                     .sort({ 'date': -1 }).limit(50).exec((err, docs) => {
                         if (!err) {
