@@ -174,19 +174,25 @@ class Peer {
 }
 
 io.on('connection', function (socket) {
-    console.log('a user connected');
-    var cookies = cookie.parse(socket.handshake.headers.cookie);
-    if (cookies.mrsid) {
-        api.post("auth", { mrsid: cookies.mrsid }, (status, data) => {
-            console.log(status, data)
-            if (status == 200 && data != null && data.user_id != null) {
-                new Peer(socket, data.user_id, data.room_id);
-            }
-        })
+    console.log('a user connected','cookie str',socket.handshake.headers.cookie);
+    try{
+        var cookies = cookie.parse(socket.handshake.headers.cookie);
+        if (cookies.mrsid) {
+            api.post("auth", { mrsid: cookies.mrsid }, (status, data) => {
+                console.log(status, data)
+                if (status == 200 && data != null && data.user_id != null) {
+                    new Peer(socket, data.user_id, data.room_id);
+                }
+            })
+        }
+        else {
+            console.error("conn has no mrsid cookie")
+        }
     }
-    else {
-        console.error("conn has no mrsid cookie")
+    catch(e){
+        console.error("err prasing cookie",e)
     }
+    
 });
 
 http.listen(PORT, () => {
