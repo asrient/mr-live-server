@@ -58,10 +58,10 @@ app.get('/', (req, res) => {
 app.get('/cookie', (req, res) => {
     if (req.query.mrsid) {
         res.cookie('mrsid', req.query.mrsid)
-        res.send('mrsid: ' + req.query.mrsid);
+        res.json({ 'mrsid': req.query.mrsid });
     }
     else {
-        res.send('<h1>[DEBUG] Set mrsid</h1>');
+        res.json({ message: '[DEBUG] Set mrsid' });
     }
 });
 
