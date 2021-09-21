@@ -6,7 +6,17 @@ var redis = require('redis');
 var http = require('http').createServer(app);
 var cookie = require("cookie");
 const { api } = require('./shared.js');
-var io = require('socket.io')(http, { path: '/updates', serveClient: false });
+
+const CORS_ORIGIN = process.env.MAIN_SERVER_PUBLIC_URL || "http://localhost:8080";
+
+var io = require('socket.io')(http, {
+    path: '/updates', serveClient: false, cors: {
+        origin: CORS_ORIGIN,
+        methods: ["GET", "POST"],
+        allowedHeaders: ["mrsid"],
+        credentials: true
+    }
+});
 var mongoose = require('mongoose');
 var { Message } = require('./models');
 var cors = require('cors');
@@ -14,7 +24,7 @@ var cors = require('cors');
 mongoose.connect(process.env.MONGO_URL || 'mongodb://localhost:27017/mr', { useNewUrlParser: true });
 
 app.use(cors({
-    origin: process.env.MAIN_SERVER_PUBLIC_URL || "http://localhost:8080",
+    origin: CORS_ORIGIN,
     credentials: true,
 }))
 
@@ -174,25 +184,29 @@ class Peer {
 }
 
 io.on('connection', function (socket) {
-    console.log('a user connected','cookie str',socket.handshake.headers.cookie);
-    try{
+    console.log('a user connected', 'cookie str', socket.handshake.headers.cookie);
+    var mrsid = null;
+    try {
         var cookies = cookie.parse(socket.handshake.headers.cookie);
-        if (cookies.mrsid) {
-            api.post("auth", { mrsid: cookies.mrsid }, (status, data) => {
-                console.log(status, data)
-                if (status == 200 && data != null && data.user_id != null) {
-                    new Peer(socket, data.user_id, data.room_id);
-                }
-            })
-        }
-        else {
-            console.error("conn has no mrsid cookie")
-        }
+        mrsid = cookies.mrsid;
     }
-    catch(e){
-        console.error("err prasing cookie",e)
+    catch (e) {
+        console.error("err prasing cookie", e)
     }
-    
+    if (!mrsid && socket.handshake.headers.mrsid) {
+        mrsid = socket.handshake.headers.mrsid;
+    }
+    if (mrsid) {
+        api.post("auth", { mrsid }, (status, data) => {
+            console.log(status, data)
+            if (status == 200 && data != null && data.user_id != null) {
+                new Peer(socket, data.user_id, data.room_id);
+            }
+        })
+    }
+    else {
+        console.error("conn has no mrsid cookie")
+    }
 });
 
 http.listen(PORT, () => {
