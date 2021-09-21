@@ -187,7 +187,7 @@ class Peer {
 }
 
 io.on('connection', function (socket) {
-    console.log('a user connected', 'headers', socket.handshake.headers);
+    console.log('a user connected', 'headers', socket.handshake.query);
     var mrsid = null;
     try {
         var cookies = cookie.parse(socket.handshake.headers.cookie);
@@ -196,8 +196,8 @@ io.on('connection', function (socket) {
     catch (e) {
         console.error("err prasing cookie", e)
     }
-    if (!mrsid && socket.handshake.headers.mrsid) {
-        mrsid = socket.handshake.headers.mrsid;
+    if (!mrsid && socket.handshake.query.mrsid) {
+        mrsid = socket.handshake.query.mrsid;
     }
     if (mrsid) {
         console.error("conn has mrsid", mrsid)
