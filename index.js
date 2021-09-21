@@ -9,6 +9,8 @@ const { api } = require('./shared.js');
 
 const CORS_ORIGIN = process.env.MAIN_SERVER_PUBLIC_URL || "http://localhost:8080";
 
+console.log("CORS_ORIGIN", CORS_ORIGIN);
+
 var io = require('socket.io')(http, {
     path: '/updates', serveClient: false, cors: {
         origin: CORS_ORIGIN,
@@ -76,8 +78,9 @@ app.get('/cookie', (req, res) => {
 });
 
 app.get('/chats', (req, res) => {
-    if (req.cookies.mrsid) {
-        api.post("auth", { mrsid: req.cookies.mrsid }, (status, data) => {
+    const mrsid = req.cookies.mrsid || req.query.mrsid;
+    if (mrsid) {
+        api.post("auth", { mrsid }, (status, data) => {
             console.log(status, data)
             if (status == 200 && data != null && data.user_id != null && data.room_id) {
                 var start = new Date(0);
@@ -184,7 +187,7 @@ class Peer {
 }
 
 io.on('connection', function (socket) {
-    console.log('a user connected', 'cookie str', socket.handshake.headers.cookie);
+    console.log('a user connected', 'headers', socket.handshake.headers);
     var mrsid = null;
     try {
         var cookies = cookie.parse(socket.handshake.headers.cookie);
@@ -197,6 +200,7 @@ io.on('connection', function (socket) {
         mrsid = socket.handshake.headers.mrsid;
     }
     if (mrsid) {
+        console.error("conn has mrsid", mrsid)
         api.post("auth", { mrsid }, (status, data) => {
             console.log(status, data)
             if (status == 200 && data != null && data.user_id != null) {
@@ -205,7 +209,7 @@ io.on('connection', function (socket) {
         })
     }
     else {
-        console.error("conn has no mrsid cookie")
+        console.error("conn has no mrsid")
     }
 });
 
